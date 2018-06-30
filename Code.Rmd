@@ -211,7 +211,7 @@ comp <- comp[is.na(comp$MPI) == FALSE,]
 sum(is.na(comp$MPI))
 ```
 
-forward and backward selection - regression
+forward and backward selection
 ```{r}
 reg_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp)
 reg_null <- lm(duration_perdollar ~ 1, data = comp)
@@ -223,13 +223,18 @@ step_B <- stepAIC(reg_full, direction = "backward", trace = TRUE)
 summary(step_B)
 ```
 
+Regression
+```{r}
+reg <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp)
+```
+
 Normalize and regression
 ```{r}
 normalize <- function(x) {
                return ((x - min(x)) / (max(x) - min(x))) }
 comp_norm <- cbind(as.data.frame(lapply(comp[,c(2,4,7,11)], normalize)), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
-reg_norm_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_norm)
-summary(reg_norm_full)
+reg_norm <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm)
+summary(reg_norm)
 ```
 
 Split training/test 70/30 - regular dataset
@@ -241,7 +246,7 @@ comp_test <- comp[-comp_train_index,]
 
 prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
 ```{r}
-comp_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_train)
+comp_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train)
 comp_reg_predict <- predict(comp_reg_model, interval = "prediction", newdata = comp_test)
 errors <- comp_reg_predict[,"fit"] - comp_test$duration_perdollar
 hist(errors)
@@ -261,11 +266,11 @@ comp_norm_test <- comp_norm[-comp_norm_train_index,]
 
 prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
 ```{r}
-comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_norm_train)
+comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
 comp_norm_reg_predict <- predict(comp_norm_reg_model, interval = "prediction", newdata = comp_norm_test)
 errors <- comp_norm_reg_predict[,"fit"] - comp_norm_test$duration_perdollar
 hist(errors)
-rmse <- sqrt(mean(errors^2))
+rmse <- sqrt(mean(errors^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
 rel_change <- abs(errors) / comp_norm_test$duration_perdollar
 pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
 paste("RMSE", rmse)
