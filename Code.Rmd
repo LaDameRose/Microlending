@@ -1,0 +1,273 @@
+```{r}
+library(zoo)
+library(fpp2)
+library(seasonal)
+library(clustMixType)
+library(mclust)
+library(outliers)
+library(mixtools)
+library(MASS)
+```
+
+Remove records where funded_time is missing
+```{r}
+loan_clean <- loan[is.na(loan$funded_time)== FALSE,]
+```
+
+Create unix funded_time
+```{r}
+loan_clean$funded_time_unix <- as.numeric(as.POSIXct(loan_clean$funded_time))
+```
+
+Create unix posted_time
+```{r}
+loan_clean$posted_time_unix <- as.numeric(as.POSIXct(loan_clean$posted_time))
+```
+
+Create duration
+```{r}
+loan_clean$duration <- loan_clean$funded_time_unix - loan_clean$posted_time_unix
+```
+Remove negative duration
+```{r}
+loan_clean <- loan_clean[loan_clean$duration > 0,]
+```
+
+Equivalize duration by funded_amount
+```{r}
+loan_clean$duration_perdollar <- loan_clean$duration - loan_clean$funded_amount
+```
+
+Remove records where funded_amount is different from loan_amount, ie loan was not fully funded
+```{r}
+loan_clean <- loan_clean[loan_clean$funded_amount - loan_clean$loan_amount == 0,]
+```
+
+Create variable for funded year/month for time series
+```{r}
+loan_clean$funded_yearmonth <- format(as.Date(loan_clean$funded_time), "%Y/%m")
+```
+
+Create variable for funded year/month/day for time series
+```{r}
+loan_clean$funded_yearmonthday <- format(as.Date(loan_clean$funded_time), "%Y/%m/%d")
+```
+
+Create variable for posted year/month for time series
+```{r}
+loan_clean$posted_yearmonth <- format(as.Date(loan_clean$posted_time), "%Y/%m")
+```
+
+Building time series with funded month year using decompose()
+```{r}
+loan_clean_tsa_funded <- loan_clean[,c(1,25)]
+loan_clean_tsa_funded <- aggregate(loan_clean_tsa_funded, by=list(loan_clean_tsa_funded$funded_yearmonth), FUN=length)
+loan_clean_tsa_funded <- loan_clean_tsa_funded[2:42,c(1,3)]
+loan_clean_tsa_funded$Group.1 <- as.Date(paste0(loan_clean_tsa_funded$Group.1,"/01"), "%Y/%m/%d")
+names(loan_clean_tsa_funded)[1] <- "yearmonth"
+ts_loan_clean_tsa_funded <- ts(loan_clean_tsa_funded$funded_yearmonth,start = c(2014,2), end = c(2017,6), frequency = 12)
+plot(ts_loan_clean_tsa_funded)
+decompose_funded <- decompose(ts_loan_clean_tsa_funded,"multiplicative")
+plot(decompose_funded)
+plot.ts(decompose_funded$seasonal)
+decompose_funded$seasonal
+plot.ts(decompose_funded$trend)
+decompose_funded$trend
+plot.ts(decompose_funded$random)
+decompose_funded$random
+summary(decompose_funded)
+```
+
+Building time series with posted month year using decompose()
+```{r}
+loan_clean_tsa_posted <- loan_clean[,c(1,26)]
+loan_clean_tsa_posted <- aggregate(loan_clean_tsa_posted, by=list(loan_clean_tsa_posted$posted_yearmonth), FUN=length)
+loan_clean_tsa_posted <- loan_clean_tsa_posted[2:42,c(1,3)]
+loan_clean_tsa_posted$Group.1 <- as.Date(paste0(loan_clean_tsa_posted$Group.1,"/01"), "%Y/%m/%d")
+names(loan_clean_tsa_posted)[1] <- "yearmonth"
+ts_loan_clean_tsa_posted <- ts(loan_clean_tsa_posted$posted_yearmonth,start = c(2014,2), end = c(2017,6), frequency = 12)
+plot(ts_loan_clean_tsa_posted)
+decompose_posted <- decompose(ts_loan_clean_tsa_posted,"multiplicative")
+plot(decompose_posted)
+plot.ts(decompose_posted$seasonal)
+decompose_posted$seasonal
+plot.ts(decompose_posted$trend)
+decompose_posted$trend
+plot.ts(decompose_posted$random)
+decompose_posted$random
+summary(decompose_posted)
+```
+Building time series with funded month year using stl()
+```{r}
+stl_funded <- stl(log(ts_loan_clean_tsa_funded),"periodic")
+seasonal_stl_funded <- exp(stl_funded$time.series[,1])
+trend_stl_funded <- exp(stl_funded$time.series[,2])
+random_stl_funded <- stl_funded$time.series[,3]
+plot(stl_funded)
+plot.ts(seasonal_stl_funded)
+seasonal_stl_funded
+plot.ts(trend_stl_funded)
+trend_stl_funded
+plot.ts(random_stl_funded)
+random_stl_funded
+summary(stl_funded)
+```
+
+Building time series with funded month year using seas() for X11
+```{r}
+seasx11_funded <- seas(ts_loan_clean_tsa_funded,x11="")
+seasonal_x11_funded <- seasonal(seasx11_funded)
+trend_x11_funded <- trendcycle(seasx11_funded)
+remain_x11_funded <- remainder(seasx11_funded)
+autoplot(seasx11_funded)
+plot.ts(seasonal_x11_funded)
+seasonal_x11_funded
+plot.ts(trend_x11_funded)
+trend_x11_funded
+plot.ts(remain_x11_funded)
+remain_x11_funded
+summary(seasx11_funded)
+```
+
+Building time series with funded month year using seas() for SEATS
+```{r}
+seats_funded <- seas(ts_loan_clean_tsa_funded)
+seasonal_seats_funded <- seasonal(seats_funded)
+trend_seats_funded <- trendcycle(seats_funded)
+remain_seats_funded <- remainder(seats_funded)
+autoplot(seats_funded)
+plot.ts(seasonal_seats_funded)
+seasonal_seats_funded
+plot.ts(trend_seats_funded)
+trend_seats_funded
+plot.ts(remain_seats_funded)
+remain_seats_funded
+summary(seats_funded)
+```
+
+Cleaning: take out unecessary variables, reduce gender to 3 levels, change yearmonth to factor, remove gender = NA
+```{r}
+loan_clean_red <- loan_clean[,c(2,5,8,15,18,19,24,25,26)]
+loan_clean_red$borrower_genders <- as.factor(ifelse(loan_clean_red$borrower_genders == "male", "M", ifelse(loan_clean_red$borrower_genders == "female", "F","G")))
+loan_clean_red$funded_yearmonth <- as.factor(loan_clean_red$funded_yearmonth)
+loan_clean_red$posted_yearmonth <- as.factor(loan_clean_red$posted_yearmonth)
+loan_clean_red <- loan_clean_red[is.na(loan_clean_red$borrower_genders) == FALSE,]
+```
+
+Determining optimal number of clusters by running 1 to 15 clusters and evaluating total wws
+```{r}
+k.max <- 15
+wss <- sapply(1:k.max, 
+              function(k){kproto(loan_clean_red, k)$tot.withinss})
+wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+```
+
+Running K prototype with 6 clusters
+```{r}
+loan_cluster <- kproto(loan_clean_red,6)
+loan_cluster
+```
+
+Running correlation on numerical variables
+```{r}
+cor(loan_clean_red[,c(1,4)])
+```
+
+remove outliers in funded amount
+```{r}
+loan_clean_red_out <- loan_clean_red[scores(loan_clean_red$funded_amount,type="chisq", prob=0.95) == FALSE,]
+loan_clean_red_out <- loan_clean_red_out[loan_clean_red_out$funded_amount != outlier(loan_clean_red_out$funded_amount, opposite = TRUE),]
+hist(loan_clean_red_out$funded_amount)
+hist(log(loan_clean_red_out$funded_amount))
+summary(loan_clean_red_out$funded_amount)
+```
+
+remove outliers in term in months
+```{r}
+loan_clean_red_out <- loan_clean_red_out[scores(loan_clean_red_out$term_in_months,type="chisq", prob=0.95) == FALSE,]
+loan_clean_red_out <- loan_clean_red_out[loan_clean_red_out$term_in_months != outlier(loan_clean_red_out$term_in_months, opposite = TRUE),]
+hist(loan_clean_red_out$term_in_months)
+hist(log(loan_clean_red_out$term_in_months))
+summary(loan_clean_red_out$term_in_months)
+```
+
+remove outliers in duration per dollar
+```{r}
+loan_clean_red_out <- loan_clean_red_out[scores(loan_clean_red_out$duration_perdollar,type="chisq", prob=0.95) == FALSE,]
+loan_clean_red_out <- loan_clean_red_out[loan_clean_red_out$duration_perdollar != outlier(loan_clean_red_out$duration_perdollar, opposite = TRUE),]
+hist(loan_clean_red_out$duration_perdollar)
+hist(log(loan_clean_red_out$duration_perdollar))
+summary(log(loan_clean_red_out$duration_perdollar))
+```
+
+merging (cleaned MPI) and remove NULL
+```{r}
+comp <- merge(loan_clean_red_out, mpi, by="country", all.x=TRUE)
+comp <- comp[is.na(comp$MPI) == FALSE,]
+sum(is.na(comp$MPI))
+```
+
+forward and backward selection - regression
+```{r}
+reg_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp)
+reg_null <- lm(duration_perdollar ~ 1, data = comp)
+summary(reg_full)
+summary(reg_null)
+step_F <- stepAIC(reg_null, scope = list(lower = reg_null, upper = reg_full), direction = "forward", trace = TRUE)
+summary(step_F)
+step_B <- stepAIC(reg_full, direction = "backward", trace = TRUE)
+summary(step_B)
+```
+
+Normalize and regression
+```{r}
+normalize <- function(x) {
+               return ((x - min(x)) / (max(x) - min(x))) }
+comp_norm <- cbind(as.data.frame(lapply(comp[,c(2,4,7,11)], normalize)), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
+reg_norm_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_norm)
+summary(reg_norm_full)
+```
+
+Split training/test 70/30 - regular dataset
+```{r}
+comp_train_index <- sample(1:nrow(comp), 0.7 * nrow(comp))
+comp_train <- comp[comp_train_index,]
+comp_test <- comp[-comp_train_index,]
+```
+
+prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
+```{r}
+comp_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_train)
+comp_reg_predict <- predict(comp_reg_model, interval = "prediction", newdata = comp_test)
+errors <- comp_reg_predict[,"fit"] - comp_test$duration_perdollar
+hist(errors)
+rmse <- sqrt(mean(errors^2))
+rel_change <- abs(errors) / comp_test$duration_perdollar
+pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_test)
+paste("RMSE", rmse)
+paste("PRED(25)", pred25)
+```
+
+Split training/test 70/30 - normalized dataset
+```{r}
+comp_norm_train_index <- sample(1:nrow(comp_norm), 0.7 * nrow(comp_norm))
+comp_norm_train <- comp_norm[comp_norm_train_index,]
+comp_norm_test <- comp_norm[-comp_norm_train_index,]
+```
+
+prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
+```{r}
+comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp_norm_train)
+comp_norm_reg_predict <- predict(comp_norm_reg_model, interval = "prediction", newdata = comp_norm_test)
+errors <- comp_norm_reg_predict[,"fit"] - comp_norm_test$duration_perdollar
+hist(errors)
+rmse <- sqrt(mean(errors^2))
+rel_change <- abs(errors) / comp_norm_test$duration_perdollar
+pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
+paste("RMSE", rmse)
+paste("PRED(25)", pred25)
+```
