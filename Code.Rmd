@@ -108,6 +108,7 @@ plot.ts(seasonal_stl_funded)
 seasonal_stl_funded
 plot.ts(trend_stl_funded)
 trend_stl_funded
+
 plot.ts(random_stl_funded)
 random_stl_funded
 summary(stl_funded)
@@ -143,6 +144,11 @@ trend_seats_funded
 plot.ts(remain_seats_funded)
 remain_seats_funded
 summary(seats_funded)
+```
+
+Comparing time series using Pearson correlation
+```{r}
+cor(cbind(random_stl_funded,remain_x11_funded,remain_seats_funded))
 ```
 
 Cleaning: take out unecessary variables, reduce gender to 3 levels, change yearmonth to factor, remove gender = NA
