@@ -243,11 +243,26 @@ reg_norm <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + bo
 summary(reg_norm)
 ```
 
+Log-log transform and regression
+```{r}
+comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,11)])), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
+reg_log <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log)
+summary(reg_log)
+```
+
 Split training/test 70/30 - regular dataset
 ```{r}
 comp_train_index <- sample(1:nrow(comp), 0.7 * nrow(comp))
 comp_train <- comp[comp_train_index,]
 comp_test <- comp[-comp_train_index,]
+```
+
+10-Fold Cross-validation to check overfitting - regular dataset
+```{r}
+comp_train_control <- trainControl(method = "cv", number = 10)
+comp_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "lm", trControl = comp_train_control)
+comp_reg_cv$resample
+comp_reg_cv$results
 ```
 
 prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
@@ -270,6 +285,13 @@ comp_norm_train <- comp_norm[comp_norm_train_index,]
 comp_norm_test <- comp_norm[-comp_norm_train_index,]
 ```
 
+10-Fold Cross-validation to check overfitting - normalized dataset
+```{r}
+comp_norm_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
+comp_norm_reg_cv$resample
+comp_norm_reg_cv$results
+```
+
 prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
 ```{r}
 comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
@@ -279,6 +301,33 @@ hist(errors)
 rmse <- sqrt(mean(errors^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
 rel_change <- abs(errors) / comp_norm_test$duration_perdollar
 pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
+paste("RMSE", rmse)
+paste("PRED(25)", pred25)
+```
+
+Split training/test 70/30 - log dataset
+```{r}
+comp_log_train_index <- sample(1:nrow(comp_log), 0.7 * nrow(comp_log))
+comp_log_train <- comp_log[comp_log_train_index,]
+comp_log_test <- comp_log[-comp_log_train_index,]
+```
+
+10-Fold Cross-validation to check overfitting - log dataset
+```{r}
+comp_log_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "lm", trControl = comp_train_control)
+comp_log_reg_cv$resample
+comp_log_reg_cv$results
+```
+
+prediction evaluated on rmse and % of cases with less than 25% error - log dataset
+```{r}
+comp_log_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train)
+comp_log_reg_predict <- predict(comp_log_reg_model, interval = "prediction", newdata = comp_log_test)
+errors <- exp(comp_log_reg_predict[,"fit"]) - exp(comp_log_test$duration_perdollar)
+hist(errors)
+rmse <- sqrt(mean(errors)^2)
+rel_change <- abs(errors) / exp(comp_log_test$duration_perdollar)
+pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_log_test)
 paste("RMSE", rmse)
 paste("PRED(25)", pred25)
 ```
