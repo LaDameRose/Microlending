@@ -178,11 +178,6 @@ loan_cluster <- kproto(loan_clean_red,6)
 loan_cluster
 ```
 
-Running correlation on numerical variables
-```{r}
-cor(loan_clean_red[,c(1,4)])
-```
-
 remove outliers in funded amount
 ```{r}
 loan_clean_red_out <- loan_clean_red[scores(loan_clean_red$funded_amount,type="chisq", prob=0.95) == FALSE,]
@@ -217,6 +212,11 @@ comp <- comp[is.na(comp$MPI) == FALSE,]
 sum(is.na(comp$MPI))
 ```
 
+Checking correlation on numerical variables
+```{r}
+cor(comp[,c(2,4,11)], method = "spearman")
+```
+
 forward and backward selection
 ```{r}
 reg_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp)
@@ -229,12 +229,12 @@ step_B <- stepAIC(reg_full, direction = "backward", trace = TRUE)
 summary(step_B)
 ```
 
-Regression
+Multiple Linear Regression
 ```{r}
 reg <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp)
 ```
 
-Normalize and regression
+Normalize and Multiple Linear regression
 ```{r}
 normalize <- function(x) {
                return ((x - min(x)) / (max(x) - min(x))) }
@@ -243,7 +243,7 @@ reg_norm <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + bo
 summary(reg_norm)
 ```
 
-Log-log transform and regression
+Log-log transform and Multiple Linear Regression
 ```{r}
 comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,11)])), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
 reg_log <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log)
@@ -257,7 +257,7 @@ comp_train <- comp[comp_train_index,]
 comp_test <- comp[-comp_train_index,]
 ```
 
-10-Fold Cross-validation to check overfitting - regular dataset
+10-Fold Cross-validation to check overfitting for Multiple Linear Regression - regular dataset
 ```{r}
 comp_train_control <- trainControl(method = "cv", number = 10)
 comp_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "lm", trControl = comp_train_control)
@@ -265,7 +265,7 @@ comp_reg_cv$resample
 comp_reg_cv$results
 ```
 
-prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
+Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
 ```{r}
 comp_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train)
 comp_reg_predict <- predict(comp_reg_model, interval = "prediction", newdata = comp_test)
@@ -285,14 +285,14 @@ comp_norm_train <- comp_norm[comp_norm_train_index,]
 comp_norm_test <- comp_norm[-comp_norm_train_index,]
 ```
 
-10-Fold Cross-validation to check overfitting - normalized dataset
+10-Fold Cross-validation to check overfitting for Multiple Linear Regression - normalized dataset
 ```{r}
 comp_norm_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
 comp_norm_reg_cv$resample
 comp_norm_reg_cv$results
 ```
 
-prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
+Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
 ```{r}
 comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
 comp_norm_reg_predict <- predict(comp_norm_reg_model, interval = "prediction", newdata = comp_norm_test)
@@ -312,14 +312,14 @@ comp_log_train <- comp_log[comp_log_train_index,]
 comp_log_test <- comp_log[-comp_log_train_index,]
 ```
 
-10-Fold Cross-validation to check overfitting - log dataset
+10-Fold Cross-validation to check overfitting for Multiple Linear Regression - log dataset
 ```{r}
 comp_log_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "lm", trControl = comp_train_control)
 comp_log_reg_cv$resample
 comp_log_reg_cv$results
 ```
 
-prediction evaluated on rmse and % of cases with less than 25% error - log dataset
+Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - log dataset
 ```{r}
 comp_log_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train)
 comp_log_reg_predict <- predict(comp_log_reg_model, interval = "prediction", newdata = comp_log_test)
@@ -330,4 +330,51 @@ rel_change <- abs(errors) / exp(comp_log_test$duration_perdollar)
 pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_log_test)
 paste("RMSE", rmse)
 paste("PRED(25)", pred25)
+```
+
+10-Fold validation to check overfitting for Regression Tree - regular dataset
+```{r}
+comp_train_control <- trainControl(method = "cv", number = 10)
+comp_dt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "rpart", trControl = comp_train_control)
+comp_dt_cv$resample
+comp_dt_cv$results
+```
+
+Regression tree Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
+```{r}
+comp_dt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "anova")
+comp_dt_model <- prune(comp_dt_model,cp=comp_dt_model$cptable[which.min(comp_dt_model$cptable[,"xerror"]),"CP"])
+comp_dt_predict <- predict(comp_dt_model, interval = "prediction", newdata = comp_test)
+errors <- comp_dt_predict - comp_test$duration_perdollar
+hist(errors)
+rmse <- sqrt(mean(errors^2))
+rel_change <- abs(errors) / comp_test$duration_perdollar
+pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_test)
+paste("RMSE", rmse)
+paste("PRED(25)", pred25)
+predrate <- rmse / mean(comp_test$duration_perdollar)
+paste("PRED ERROR RATE", predrate)
+```
+
+10-Fold validation to check overfitting for Regression Tree - normalized dataset
+```{r}
+comp_norm_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
+comp_norm_reg_cv$resample
+comp_norm_reg_cv$results
+```
+
+Regression Tree Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
+```{r}
+comp_norm_dt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "anova")
+comp_norm_dt_model <- prune(comp_norm_dt_model,cp=comp_norm_dt_model$cptable[which.min(comp_norm_dt_model$cptable[,"xerror"]),"CP"])
+comp_norm_dt_predict <- predict(comp_norm_dt_model, interval = "prediction", newdata = comp_norm_test)
+errors <- comp_norm_dt_predict - comp_norm_test$duration_perdollar
+hist(errors)
+rmse <- sqrt(mean(errors^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
+rel_change <- abs(errors) / comp_norm_test$duration_perdollar
+pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
+paste("RMSE", rmse)
+paste("PRED(25)", pred25)
+predrate <- rmse / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
+paste("PRED ERROR RATE", predrate)
 ```
