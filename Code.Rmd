@@ -3,7 +3,6 @@ library(zoo)
 library(fpp2)
 library(seasonal)
 library(clustMixType)
-library(mclust)
 library(outliers)
 library(mixtools)
 library(MASS)
@@ -219,19 +218,19 @@ cor(comp[,c(2,4,11)], method = "spearman")
 
 forward and backward selection
 ```{r}
-reg_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp)
-reg_null <- lm(duration_perdollar ~ 1, data = comp)
-summary(reg_full)
-summary(reg_null)
-step_F <- stepAIC(reg_null, scope = list(lower = reg_null, upper = reg_full), direction = "forward", trace = TRUE)
+mlr_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI + country, data = comp)
+mlr_null <- lm(duration_perdollar ~ 1, data = comp)
+summary(mlr_full)
+summary(mlr_null)
+step_F <- stepAIC(mlr_null, scope = list(lower = mlr_null, upper = mlr_full), direction = "forward", trace = TRUE)
 summary(step_F)
-step_B <- stepAIC(reg_full, direction = "backward", trace = TRUE)
+step_B <- stepAIC(mlr_full, direction = "backward", trace = TRUE)
 summary(step_B)
 ```
 
 Multiple Linear Regression
 ```{r}
-reg <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp)
+reg_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp)
 ```
 
 Normalize and Multiple Linear regression
@@ -239,15 +238,15 @@ Normalize and Multiple Linear regression
 normalize <- function(x) {
                return ((x - min(x)) / (max(x) - min(x))) }
 comp_norm <- cbind(as.data.frame(lapply(comp[,c(2,4,7,11)], normalize)), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
-reg_norm <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm)
-summary(reg_norm)
+norm_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm)
+summary(norm_mlr)
 ```
 
 Log-log transform and Multiple Linear Regression
 ```{r}
 comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,11)])), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_yearmonth = comp$funded_yearmonth, posted_yearmonth = comp$posted_yearmonth)
-reg_log <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log)
-summary(reg_log)
+log_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log)
+summary(log_mlr)
 ```
 
 Split training/test 70/30 - regular dataset
@@ -260,22 +259,24 @@ comp_test <- comp[-comp_train_index,]
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - regular dataset
 ```{r}
 comp_train_control <- trainControl(method = "cv", number = 10)
-comp_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "lm", trControl = comp_train_control)
-comp_reg_cv$resample
-comp_reg_cv$results
+reg_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "lm", trControl = comp_train_control)
+reg_mlr_cv$resample
+reg_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
 ```{r}
-comp_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train)
-comp_reg_predict <- predict(comp_reg_model, interval = "prediction", newdata = comp_test)
-errors <- comp_reg_predict[,"fit"] - comp_test$duration_perdollar
-hist(errors)
-rmse <- sqrt(mean(errors^2))
-rel_change <- abs(errors) / comp_test$duration_perdollar
-pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_test)
-paste("RMSE", rmse)
-paste("PRED(25)", pred25)
+reg_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train)
+reg_mlr_predict <- predict(reg_mlr_model, interval = "prediction", newdata = comp_test)
+errors_reg_mlr <- reg_mlr_predict[,"fit"] - comp_test$duration_perdollar
+hist(errors_reg_mlr)
+rmse_reg_mlr <- sqrt(mean(errors_reg_mlr^2))
+rel_change_reg_mlr <- abs(errors_reg_mlr) / comp_test$duration_perdollar
+pred25_reg_mlr <- table(rel_change_reg_mlr <0.25)["TRUE"] / nrow(comp_test)
+predrate_reg_mlr <- rmse_reg_mlr / mean(comp_test$duration_perdollar)
+paste("RMSE", rmse_reg_mlr)
+paste("PRED(25)", pred25_reg_mlr)
+paste("PRED ERROR RATE", predrate_reg_mlr)
 ```
 
 Split training/test 70/30 - normalized dataset
@@ -287,22 +288,24 @@ comp_norm_test <- comp_norm[-comp_norm_train_index,]
 
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - normalized dataset
 ```{r}
-comp_norm_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
-comp_norm_reg_cv$resample
-comp_norm_reg_cv$results
+norm_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
+norm_mlr_cv$resample
+norm_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
 ```{r}
-comp_norm_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
-comp_norm_reg_predict <- predict(comp_norm_reg_model, interval = "prediction", newdata = comp_norm_test)
-errors <- comp_norm_reg_predict[,"fit"] - comp_norm_test$duration_perdollar
-hist(errors)
-rmse <- sqrt(mean(errors^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
-rel_change <- abs(errors) / comp_norm_test$duration_perdollar
-pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
-paste("RMSE", rmse)
-paste("PRED(25)", pred25)
+norm_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
+norm_mlr_predict <- predict(norm_mlr_model, interval = "prediction", newdata = comp_norm_test)
+errors_norm_mlr <- norm_mlr_predict[,"fit"] - comp_norm_test$duration_perdollar
+hist(errors_norm_mlr)
+rmse_norm_mlr <- sqrt(mean(errors_norm_mlr^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
+rel_change_norm_mlr <- abs(errors_norm_mlr) / comp_norm_test$duration_perdollar
+pred25_norm_mlr <- table(rel_change_norm_mlr<0.25)["TRUE"] / nrow(comp_norm_test)
+predrate_norm_mlr <- rmse_norm_mlr / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
+paste("RMSE", rmse_norm_mlr)
+paste("PRED(25)", pred25_norm_mlr)
+paste("PRED ERROR RATE", predrate_norm_mlr)
 ```
 
 Split training/test 70/30 - log dataset
@@ -314,67 +317,68 @@ comp_log_test <- comp_log[-comp_log_train_index,]
 
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - log dataset
 ```{r}
-comp_log_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "lm", trControl = comp_train_control)
-comp_log_reg_cv$resample
-comp_log_reg_cv$results
+log_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "lm", trControl = comp_train_control)
+log_mlr_cv$resample
+log_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - log dataset
 ```{r}
-comp_log_reg_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train)
-comp_log_reg_predict <- predict(comp_log_reg_model, interval = "prediction", newdata = comp_log_test)
-errors <- exp(comp_log_reg_predict[,"fit"]) - exp(comp_log_test$duration_perdollar)
-hist(errors)
-rmse <- sqrt(mean(errors)^2)
-rel_change <- abs(errors) / exp(comp_log_test$duration_perdollar)
-pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_log_test)
-paste("RMSE", rmse)
-paste("PRED(25)", pred25)
+log_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train)
+log_mlr_predict <- predict(log_mlr_model, interval = "prediction", newdata = comp_log_test)
+errors_log_mlr <- exp(log_mlr_predict[,"fit"]) - exp(comp_log_test$duration_perdollar)
+hist(errors_log_mlr)
+rmse_log_mlr <- sqrt(mean(errors_log_mlr)^2)
+rel_change_log_mlr <- abs(errors_log_mlr) / exp(comp_log_test$duration_perdollar)
+pred25_log_mlr <- table(rel_change_log_mlr <0.25)["TRUE"] / nrow(comp_log_test)
+predrate_log_mlr <- rmse_log_mlr / mean(comp_test$duration_perdollar)
+paste("RMSE", rmse_log_mlr)
+paste("PRED(25)", pred25_log_mlr)
+paste("PRED ERROR RATE", predrate_log_mlr)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - regular dataset
 ```{r}
-comp_train_control <- trainControl(method = "cv", number = 10)
-comp_dt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "rpart", trControl = comp_train_control)
-comp_dt_cv$resample
-comp_dt_cv$results
+reg_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "rpart", trControl = comp_train_control)
+reg_rt_cv$resample
+reg_rt_cv$results
 ```
 
 Regression tree Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
 ```{r}
-comp_dt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "anova")
-comp_dt_model <- prune(comp_dt_model,cp=comp_dt_model$cptable[which.min(comp_dt_model$cptable[,"xerror"]),"CP"])
-comp_dt_predict <- predict(comp_dt_model, interval = "prediction", newdata = comp_test)
-errors <- comp_dt_predict - comp_test$duration_perdollar
-hist(errors)
-rmse <- sqrt(mean(errors^2))
-rel_change <- abs(errors) / comp_test$duration_perdollar
-pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_test)
-paste("RMSE", rmse)
-paste("PRED(25)", pred25)
-predrate <- rmse / mean(comp_test$duration_perdollar)
-paste("PRED ERROR RATE", predrate)
+reg_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "anova")
+reg_rt_model <- prune(reg_rt_model,cp=reg_rt_model$cptable[which.min(reg_rt_model$cptable[,"xerror"]),"CP"])
+reg_rt_predict <- predict(reg_rt_model, interval = "prediction", newdata = comp_test)
+errors_reg_rt <- reg_rt_predict - comp_test$duration_perdollar
+hist(errors_reg_rt)
+rmse_reg_rt <- sqrt(mean(errors_reg_rt^2))
+rel_change_reg_rt <- abs(errors_reg_rt) / comp_test$duration_perdollar
+pred25_reg_rt <- table(rel_change_reg_rt<0.25)["TRUE"] / nrow(comp_test)
+predrate_reg_rt <- rmse_reg_rt / mean(comp_test$duration_perdollar)
+paste("RMSE", rmse_reg_rt)
+paste("PRED(25)", pred25_reg_rt)
+paste("PRED ERROR RATE", predrate_reg_rt)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - normalized dataset
 ```{r}
-comp_norm_reg_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
-comp_norm_reg_cv$resample
-comp_norm_reg_cv$results
+norm_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "rpart", trControl = comp_train_control)
+norm_rt_cv$resample
+norm_rt_cv$results
 ```
 
 Regression Tree Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
 ```{r}
-comp_norm_dt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "anova")
-comp_norm_dt_model <- prune(comp_norm_dt_model,cp=comp_norm_dt_model$cptable[which.min(comp_norm_dt_model$cptable[,"xerror"]),"CP"])
-comp_norm_dt_predict <- predict(comp_norm_dt_model, interval = "prediction", newdata = comp_norm_test)
-errors <- comp_norm_dt_predict - comp_norm_test$duration_perdollar
-hist(errors)
-rmse <- sqrt(mean(errors^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
-rel_change <- abs(errors) / comp_norm_test$duration_perdollar
-pred25 <- table(rel_change<0.25)["TRUE"] / nrow(comp_norm_test)
-paste("RMSE", rmse)
-paste("PRED(25)", pred25)
-predrate <- rmse / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
-paste("PRED ERROR RATE", predrate)
+norm_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "anova")
+norm_rt_model <- prune(norm_rt_model,cp=norm_rt_model$cptable[which.min(norm_rt_model$cptable[,"xerror"]),"CP"])
+norm_rt_predict <- predict(norm_rt_model, interval = "prediction", newdata = comp_norm_test)
+errors_norm_rt <- norm_rt_predict - comp_norm_test$duration_perdollar
+hist(errors_norm_rt)
+rmse_norm_rt <- sqrt(mean(errors_norm_rt^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
+rel_change_norm_rt <- abs(errors_norm_rt) / comp_norm_test$duration_perdollar
+pred25_norm_rt <- table(rel_change_norm_rt <0.25)["TRUE"] / nrow(comp_norm_test)
+predrate_norm_rt <- rmse_norm_rt / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
+paste("RMSE", rmse_norm_rt)
+paste("PRED(25)", pred25_norm_rt)
+paste("PRED ERROR RATE", predrate_norm_rt)
 ```
