@@ -276,10 +276,8 @@ hist(errors_reg_mlr)
 rmse_reg_mlr <- sqrt(mean(errors_reg_mlr^2))
 rel_change_reg_mlr <- abs(errors_reg_mlr) / comp_test$duration_perdollar
 pred25_reg_mlr <- table(rel_change_reg_mlr <0.25)["TRUE"] / nrow(comp_test)
-predrate_reg_mlr <- rmse_reg_mlr / mean(comp_test$duration_perdollar)
 paste("RMSE", rmse_reg_mlr)
 paste("PRED(25)", pred25_reg_mlr)
-paste("PRED ERROR RATE", predrate_reg_mlr)
 ```
 
 Split training/test 70/30 - normalized dataset
@@ -305,10 +303,8 @@ hist(errors_norm_mlr)
 rmse_norm_mlr <- sqrt(mean(errors_norm_mlr^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
 rel_change_norm_mlr <- abs(errors_norm_mlr) / comp_norm_test$duration_perdollar
 pred25_norm_mlr <- table(rel_change_norm_mlr<0.25)["TRUE"] / nrow(comp_norm_test)
-predrate_norm_mlr <- rmse_norm_mlr / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
 paste("RMSE", rmse_norm_mlr)
 paste("PRED(25)", pred25_norm_mlr)
-paste("PRED ERROR RATE", predrate_norm_mlr)
 ```
 
 Split training/test 70/30 - log dataset
@@ -334,10 +330,8 @@ hist(errors_log_mlr)
 rmse_log_mlr <- sqrt(mean(errors_log_mlr)^2)
 rel_change_log_mlr <- abs(errors_log_mlr) / exp(comp_log_test$duration_perdollar)
 pred25_log_mlr <- table(rel_change_log_mlr <0.25)["TRUE"] / nrow(comp_log_test)
-predrate_log_mlr <- rmse_log_mlr / mean(comp_test$duration_perdollar)
 paste("RMSE", rmse_log_mlr)
 paste("PRED(25)", pred25_log_mlr)
-paste("PRED ERROR RATE", predrate_log_mlr)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - regular dataset
@@ -357,10 +351,8 @@ hist(errors_reg_rt)
 rmse_reg_rt <- sqrt(mean(errors_reg_rt^2))
 rel_change_reg_rt <- abs(errors_reg_rt) / comp_test$duration_perdollar
 pred25_reg_rt <- table(rel_change_reg_rt<0.25)["TRUE"] / nrow(comp_test)
-predrate_reg_rt <- rmse_reg_rt / mean(comp_test$duration_perdollar)
 paste("RMSE", rmse_reg_rt)
 paste("PRED(25)", pred25_reg_rt)
-paste("PRED ERROR RATE", predrate_reg_rt)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - normalized dataset
@@ -380,8 +372,27 @@ hist(errors_norm_rt)
 rmse_norm_rt <- sqrt(mean(errors_norm_rt^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
 rel_change_norm_rt <- abs(errors_norm_rt) / comp_norm_test$duration_perdollar
 pred25_norm_rt <- table(rel_change_norm_rt <0.25)["TRUE"] / nrow(comp_norm_test)
-predrate_norm_rt <- rmse_norm_rt / (mean(comp_norm_test$duration_perdollar) * (max(comp$duration_perdollar) - min(comp$duration_perdollar)))
 paste("RMSE", rmse_norm_rt)
 paste("PRED(25)", pred25_norm_rt)
-paste("PRED ERROR RATE", predrate_norm_rt)
+```
+
+10-Fold validation to check overfitting for Regression Tree - log dataset
+```{r}
+log_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "rpart", trControl = comp_train_control)
+log_rt_cv$resample
+log_rt_cv$results
+```
+
+Regression Tree Prediction evaluated on rmse and % of cases with less than 25% error - log dataset
+```{r}
+log_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "anova")
+log_rt_model <- prune(log_rt_model,cp=log_rt_model$cptable[which.min(log_rt_model$cptable[,"xerror"]),"CP"])
+log_rt_predict <- predict(log_rt_model, interval = "prediction", newdata = comp_log_test)
+errors_log_rt <- exp(log_rt_predict) - exp(comp_log_test$duration_perdollar)
+hist(errors_log_rt)
+rmse_log_rt <- sqrt(mean(errors_log_rt)^2)
+rel_change_log_rt <- abs(errors_log_rt) / exp(comp_log_test$duration_perdollar)
+pred25_log_rt <- table(rel_change_log_rt<0.25)["TRUE"] / nrow(comp_log_test)
+paste("RMSE", rmse_log_rt)
+paste("PRED(25)", pred25_log_rt)
 ```
