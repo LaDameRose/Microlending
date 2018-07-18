@@ -1,3 +1,4 @@
+
 ```{r}
 library(zoo)
 library(fpp2)
@@ -6,6 +7,8 @@ library(clustMixType)
 library(outliers)
 library(mixtools)
 library(MASS)
+library(caret)
+library(rpart)
 ```
 
 Remove records where funded_time is missing
