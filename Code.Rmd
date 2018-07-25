@@ -216,7 +216,7 @@ sum(is.na(comp$MPI))
 
 Checking correlation on numerical variables
 ```{r}
-cor(comp[,c(2,4,11)], method = "spearman")
+cor(comp[,c(2,4,7,11)], method = "spearman")
 ```
 
 forward and backward selection
@@ -267,17 +267,14 @@ reg_mlr_cv$resample
 reg_mlr_cv$results
 ```
 
-Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
+Multiple Linear Regression Prediction evaluated on rmse - regular dataset
 ```{r}
 reg_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train)
 reg_mlr_predict <- predict(reg_mlr_model, interval = "prediction", newdata = comp_test)
 errors_reg_mlr <- reg_mlr_predict[,"fit"] - comp_test$duration_perdollar
 hist(errors_reg_mlr)
 rmse_reg_mlr <- sqrt(mean(errors_reg_mlr^2))
-rel_change_reg_mlr <- abs(errors_reg_mlr) / comp_test$duration_perdollar
-pred25_reg_mlr <- table(rel_change_reg_mlr <0.25)["TRUE"] / nrow(comp_test)
 paste("RMSE", rmse_reg_mlr)
-paste("PRED(25)", pred25_reg_mlr)
 ```
 
 Split training/test 70/30 - normalized dataset
@@ -294,17 +291,14 @@ norm_mlr_cv$resample
 norm_mlr_cv$results
 ```
 
-Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
+Multiple Linear Regression Prediction evaluated on rmse - normalized dataset
 ```{r}
 norm_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train)
 norm_mlr_predict <- predict(norm_mlr_model, interval = "prediction", newdata = comp_norm_test)
 errors_norm_mlr <- norm_mlr_predict[,"fit"] - comp_norm_test$duration_perdollar
 hist(errors_norm_mlr)
 rmse_norm_mlr <- sqrt(mean(errors_norm_mlr^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
-rel_change_norm_mlr <- abs(errors_norm_mlr) / comp_norm_test$duration_perdollar
-pred25_norm_mlr <- table(rel_change_norm_mlr<0.25)["TRUE"] / nrow(comp_norm_test)
 paste("RMSE", rmse_norm_mlr)
-paste("PRED(25)", pred25_norm_mlr)
 ```
 
 Split training/test 70/30 - log dataset
@@ -321,17 +315,14 @@ log_mlr_cv$resample
 log_mlr_cv$results
 ```
 
-Multiple Linear Regression Prediction evaluated on rmse and % of cases with less than 25% error - log dataset
+Multiple Linear Regression Prediction evaluated on rmse - log dataset
 ```{r}
 log_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train)
 log_mlr_predict <- predict(log_mlr_model, interval = "prediction", newdata = comp_log_test)
 errors_log_mlr <- exp(log_mlr_predict[,"fit"]) - exp(comp_log_test$duration_perdollar)
 hist(errors_log_mlr)
 rmse_log_mlr <- sqrt(mean(errors_log_mlr)^2)
-rel_change_log_mlr <- abs(errors_log_mlr) / exp(comp_log_test$duration_perdollar)
-pred25_log_mlr <- table(rel_change_log_mlr <0.25)["TRUE"] / nrow(comp_log_test)
 paste("RMSE", rmse_log_mlr)
-paste("PRED(25)", pred25_log_mlr)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - regular dataset
@@ -341,7 +332,7 @@ reg_rt_cv$resample
 reg_rt_cv$results
 ```
 
-Regression tree Prediction evaluated on rmse and % of cases with less than 25% error - regular dataset
+Regression tree Prediction evaluated on rmse - regular dataset
 ```{r}
 reg_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_train, method = "anova")
 reg_rt_model <- prune(reg_rt_model,cp=reg_rt_model$cptable[which.min(reg_rt_model$cptable[,"xerror"]),"CP"])
@@ -349,10 +340,7 @@ reg_rt_predict <- predict(reg_rt_model, interval = "prediction", newdata = comp_
 errors_reg_rt <- reg_rt_predict - comp_test$duration_perdollar
 hist(errors_reg_rt)
 rmse_reg_rt <- sqrt(mean(errors_reg_rt^2))
-rel_change_reg_rt <- abs(errors_reg_rt) / comp_test$duration_perdollar
-pred25_reg_rt <- table(rel_change_reg_rt<0.25)["TRUE"] / nrow(comp_test)
 paste("RMSE", rmse_reg_rt)
-paste("PRED(25)", pred25_reg_rt)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - normalized dataset
@@ -362,7 +350,7 @@ norm_rt_cv$resample
 norm_rt_cv$results
 ```
 
-Regression Tree Prediction evaluated on rmse and % of cases with less than 25% error - normalized dataset
+Regression Tree Prediction evaluated on rmse - normalized dataset
 ```{r}
 norm_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_norm_train, method = "anova")
 norm_rt_model <- prune(norm_rt_model,cp=norm_rt_model$cptable[which.min(norm_rt_model$cptable[,"xerror"]),"CP"])
@@ -370,10 +358,7 @@ norm_rt_predict <- predict(norm_rt_model, interval = "prediction", newdata = com
 errors_norm_rt <- norm_rt_predict - comp_norm_test$duration_perdollar
 hist(errors_norm_rt)
 rmse_norm_rt <- sqrt(mean(errors_norm_rt^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
-rel_change_norm_rt <- abs(errors_norm_rt) / comp_norm_test$duration_perdollar
-pred25_norm_rt <- table(rel_change_norm_rt <0.25)["TRUE"] / nrow(comp_norm_test)
 paste("RMSE", rmse_norm_rt)
-paste("PRED(25)", pred25_norm_rt)
 ```
 
 10-Fold validation to check overfitting for Regression Tree - log dataset
@@ -383,7 +368,7 @@ log_rt_cv$resample
 log_rt_cv$results
 ```
 
-Regression Tree Prediction evaluated on rmse and % of cases with less than 25% error - log dataset
+Regression Tree Prediction evaluated on rmse - log dataset
 ```{r}
 log_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_yearmonth + posted_yearmonth + MPI, data = comp_log_train, method = "anova")
 log_rt_model <- prune(log_rt_model,cp=log_rt_model$cptable[which.min(log_rt_model$cptable[,"xerror"]),"CP"])
@@ -391,8 +376,44 @@ log_rt_predict <- predict(log_rt_model, interval = "prediction", newdata = comp_
 errors_log_rt <- exp(log_rt_predict) - exp(comp_log_test$duration_perdollar)
 hist(errors_log_rt)
 rmse_log_rt <- sqrt(mean(errors_log_rt)^2)
-rel_change_log_rt <- abs(errors_log_rt) / exp(comp_log_test$duration_perdollar)
-pred25_log_rt <- table(rel_change_log_rt<0.25)["TRUE"] / nrow(comp_log_test)
 paste("RMSE", rmse_log_rt)
-paste("PRED(25)", pred25_log_rt)
+```
+
+Random Forest Prediction evaluated on rmse - regular dataset
+```{r}
+reg_rf_model <- randomForest(comp_train[,-c(1,7,8,9,10)], comp_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+round(importance(reg_rf_model),2)
+reg_rf_predict <- predict(reg_rf_model, interval = "prediction", newdata = comp_test)
+errors_reg_rf <- reg_rf_predict - comp_test$duration_perdollar
+hist(errors_reg_rf)
+rmse_reg_rf <- sqrt(mean(errors_reg_rf^2))
+paste("RMSE", rmse_reg_rf)
+print(reg_rf_model)
+plot(reg_rf_model)
+```
+
+Random Forest Prediction evaluated on rmse - normalized dataset
+```{r}
+norm_rf_model <- randomForest(comp_norm_train[,-c(3,5,9,10)], comp_norm_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+round(importance(norm_rf_model),2)
+norm_rf_predict <- predict(norm_rf_model, interval = "prediction", newdata = comp_norm_test)
+errors_norm_rf <- norm_rf_predict - comp_norm_test$duration_perdollar
+hist(errors_norm_rf)
+rmse_norm_rf <- sqrt(mean(errors_norm_rf^2)) * (max(comp$duration_perdollar) - min(comp$duration_perdollar))
+paste("RMSE", rmse_norm_rf)
+print(norm_rf_model)
+plot(norm_rf_model)
+```
+
+Random Forest Prediction evaluated on rmse - log dataset
+```{r}
+log_rf_model <- randomForest(comp_log_train[,-c(3,5,9,10)], comp_log_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+round(importance(log_rf_model),2)
+log_rf_predict <- predict(log_rf_model, interval = "prediction", newdata = comp_log_test)
+errors_log_rf <- exp(log_rf_predict) - exp(comp_log_test$duration_perdollar)
+hist(errors_log_rf)
+rmse_log_rf <- sqrt(mean(errors_log_rf)^2)
+paste("RMSE", rmse_log_rf)
+print(log_rf_model)
+plot(log_rf_model)
 ```
