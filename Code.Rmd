@@ -9,6 +9,7 @@ library(mixtools)
 library(MASS)
 library(caret)
 library(rpart)
+library(randomForest)
 ```
 
 Remove records where funded_time is missing
