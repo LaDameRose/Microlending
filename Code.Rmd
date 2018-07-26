@@ -175,9 +175,9 @@ plot(1:k.max, wss,
      ylab="Total within-clusters sum of squares")
 ```
 
-Running K prototype with 6 clusters
+Running K prototype with 8 clusters
 ```{r}
-loan_cluster <- kproto(loan_clean_red,6)
+loan_cluster <- kproto(loan_clean_red,8)
 loan_cluster
 ```
 
