@@ -256,7 +256,7 @@ summary(norm_mlr)
 
 Log-log transform and Multiple Linear Regression
 ```{r}
-comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,8)])), sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, posted_month = comp$posted_month)
+comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7)])), sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, posted_month = comp$posted_month)
 log_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log)
 summary(log_mlr)
 ```
