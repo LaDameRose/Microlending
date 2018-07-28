@@ -410,7 +410,7 @@ plot(reg_rf_model)
 
 Random Forest Prediction evaluated on rmse - normalized dataset
 ```{r}
-norm_rf_model <- randomForest(comp_norm_train[,-c(3,5,9)], comp_norm_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+norm_rf_model <- randomForest(comp_norm_train[,-3], comp_norm_train$duration_perdollar, ntree = 50, do.trace = TRUE)
 round(importance(norm_rf_model),2)
 norm_rf_predict <- predict(norm_rf_model, interval = "prediction", newdata = comp_norm_test)
 errors_norm_rf <- norm_rf_predict - comp_norm_test$duration_perdollar
@@ -424,7 +424,7 @@ plot(norm_rf_model)
 
 Random Forest Prediction evaluated on rmse - log dataset
 ```{r}
-log_rf_model <- randomForest(comp_log_train[,-c(3,5,9)], comp_log_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+log_rf_model <- randomForest(comp_log_train[,-3], comp_log_train$duration_perdollar, ntree = 50, do.trace = TRUE)
 round(importance(log_rf_model),2)
 log_rf_predict <- predict(log_rf_model, interval = "prediction", newdata = comp_log_test)
 errors_log_rf <- exp(log_rf_predict) - exp(comp_log_test$duration_perdollar)
