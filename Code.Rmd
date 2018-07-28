@@ -230,7 +230,7 @@ cor(comp[,c(2,4,7,8)], method = "spearman")
 
 forward and backward selection
 ```{r}
-mlr_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + MPI + country, data = comp)
+mlr_full <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI , data = comp)
 mlr_null <- lm(duration_perdollar ~ 1, data = comp)
 summary(mlr_full)
 summary(mlr_null)
@@ -242,22 +242,22 @@ summary(step_B)
 
 Multiple Linear Regression
 ```{r}
-reg_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp)
+reg_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp)
 ```
 
 Normalize and Multiple Linear regression
 ```{r}
 normalize <- function(x) {
                return ((x - min(x)) / (max(x) - min(x))) }
-comp_norm <- cbind(as.data.frame(lapply(comp[,c(2,4,7,8)], normalize)), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_month = comp$funded_month, posted_month = comp$posted_month)
-norm_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_norm)
+comp_norm <- cbind(as.data.frame(lapply(comp[,c(2,4,7,8)], normalize)), sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, posted_month = comp$posted_month)
+norm_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_norm)
 summary(norm_mlr)
 ```
 
 Log-log transform and Multiple Linear Regression
 ```{r}
-comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,8)])), country = comp$country, sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, funded_month = comp$funded_month, posted_month = comp$posted_month)
-log_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_log)
+comp_log <- cbind(as.data.frame(log(comp[,c(2,4,7,8)])), sector = comp$sector, borrower_genders = comp$borrower_genders, repayment_interval = comp$repayment_interval, posted_month = comp$posted_month)
+log_mlr <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log)
 summary(log_mlr)
 ```
 
@@ -271,14 +271,14 @@ comp_test <- comp[-comp_train_index,]
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - regular dataset
 ```{r}
 comp_train_control <- trainControl(method = "cv", number = 10)
-reg_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_train, method = "lm", trControl = comp_train_control)
+reg_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_train, method = "lm", trControl = comp_train_control)
 reg_mlr_cv$resample
 reg_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse - regular dataset
 ```{r}
-reg_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_train)
+reg_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_train)
 reg_mlr_predict <- predict(reg_mlr_model, interval = "prediction", newdata = comp_test)
 errors_reg_mlr <- reg_mlr_predict[,"fit"] - comp_test$duration_perdollar
 hist(errors_reg_mlr)
@@ -296,14 +296,14 @@ comp_norm_test <- comp_norm[-comp_norm_train_index,]
 
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - normalized dataset
 ```{r}
-norm_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_norm_train, method = "lm", trControl = comp_train_control)
+norm_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_norm_train, method = "lm", trControl = comp_train_control)
 norm_mlr_cv$resample
 norm_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse - normalized dataset
 ```{r}
-norm_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_norm_train)
+norm_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_norm_train)
 norm_mlr_predict <- predict(norm_mlr_model, interval = "prediction", newdata = comp_norm_test)
 errors_norm_mlr <- norm_mlr_predict[,"fit"] - comp_norm_test$duration_perdollar
 hist(errors_norm_mlr)
@@ -321,14 +321,14 @@ comp_log_test <- comp_log[-comp_log_train_index,]
 
 10-Fold Cross-validation to check overfitting for Multiple Linear Regression - log dataset
 ```{r}
-log_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_log_train, method = "lm", trControl = comp_train_control)
+log_mlr_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log_train, method = "lm", trControl = comp_train_control)
 log_mlr_cv$resample
 log_mlr_cv$results
 ```
 
 Multiple Linear Regression Prediction evaluated on rmse - log dataset
 ```{r}
-log_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_log_train)
+log_mlr_model <- lm(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log_train)
 log_mlr_predict <- predict(log_mlr_model, interval = "prediction", newdata = comp_log_test)
 errors_log_mlr <- exp(log_mlr_predict[,"fit"]) - exp(comp_log_test$duration_perdollar)
 hist(errors_log_mlr)
@@ -339,14 +339,14 @@ seconds_to_period(rmse_log_mlr)
 
 10-Fold validation to check overfitting for Regression Tree - regular dataset
 ```{r}
-reg_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_train, method = "rpart", trControl = comp_train_control)
+reg_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_train, method = "rpart", trControl = comp_train_control)
 reg_rt_cv$resample
 reg_rt_cv$results
 ```
 
 Regression tree Prediction evaluated on rmse - regular dataset
 ```{r}
-reg_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_train, method = "anova")
+reg_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_train, method = "anova")
 reg_rt_model <- prune(reg_rt_model,cp=reg_rt_model$cptable[which.min(reg_rt_model$cptable[,"xerror"]),"CP"])
 reg_rt_predict <- predict(reg_rt_model, interval = "prediction", newdata = comp_test)
 errors_reg_rt <- reg_rt_predict - comp_test$duration_perdollar
@@ -358,14 +358,14 @@ seconds_to_period(rmse_reg_rt)
 
 10-Fold validation to check overfitting for Regression Tree - normalized dataset
 ```{r}
-norm_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_norm_train, method = "rpart", trControl = comp_train_control)
+norm_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_norm_train, method = "rpart", trControl = comp_train_control)
 norm_rt_cv$resample
 norm_rt_cv$results
 ```
 
 Regression Tree Prediction evaluated on rmse - normalized dataset
 ```{r}
-norm_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_norm_train, method = "anova")
+norm_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_norm_train, method = "anova")
 norm_rt_model <- prune(norm_rt_model,cp=norm_rt_model$cptable[which.min(norm_rt_model$cptable[,"xerror"]),"CP"])
 norm_rt_predict <- predict(norm_rt_model, interval = "prediction", newdata = comp_norm_test)
 errors_norm_rt <- norm_rt_predict - comp_norm_test$duration_perdollar
@@ -377,14 +377,14 @@ seconds_to_period(rmse_norm_rt)
 
 10-Fold validation to check overfitting for Regression Tree - log dataset
 ```{r}
-log_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_log_train, method = "rpart", trControl = comp_train_control)
+log_rt_cv <- train(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log_train, method = "rpart", trControl = comp_train_control)
 log_rt_cv$resample
 log_rt_cv$results
 ```
 
 Regression Tree Prediction evaluated on rmse - log dataset
 ```{r}
-log_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + funded_month + posted_month + country, data = comp_log_train, method = "anova")
+log_rt_model <- rpart(duration_perdollar ~ funded_amount + sector + term_in_months + borrower_genders + repayment_interval + posted_month + MPI, data = comp_log_train, method = "anova")
 log_rt_model <- prune(log_rt_model,cp=log_rt_model$cptable[which.min(log_rt_model$cptable[,"xerror"]),"CP"])
 log_rt_predict <- predict(log_rt_model, interval = "prediction", newdata = comp_log_test)
 errors_log_rt <- exp(log_rt_predict) - exp(comp_log_test$duration_perdollar)
@@ -396,7 +396,7 @@ seconds_to_period(rmse_log_rt)
 
 Random Forest Prediction evaluated on rmse - regular dataset
 ```{r}
-reg_rf_model <- randomForest(comp_train[,-c(1,7)], comp_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+reg_rf_model <- randomForest(comp_train[,-c(1,7,9)], comp_train$duration_perdollar, ntree = 50, do.trace = TRUE)
 round(importance(reg_rf_model),2)
 reg_rf_predict <- predict(reg_rf_model, interval = "prediction", newdata = comp_test)
 errors_reg_rf <- reg_rf_predict - comp_test$duration_perdollar
@@ -410,7 +410,7 @@ plot(reg_rf_model)
 
 Random Forest Prediction evaluated on rmse - normalized dataset
 ```{r}
-norm_rf_model <- randomForest(comp_norm_train[,-c(3,5)], comp_norm_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+norm_rf_model <- randomForest(comp_norm_train[,-c(3,5,9)], comp_norm_train$duration_perdollar, ntree = 50, do.trace = TRUE)
 round(importance(norm_rf_model),2)
 norm_rf_predict <- predict(norm_rf_model, interval = "prediction", newdata = comp_norm_test)
 errors_norm_rf <- norm_rf_predict - comp_norm_test$duration_perdollar
@@ -424,7 +424,7 @@ plot(norm_rf_model)
 
 Random Forest Prediction evaluated on rmse - log dataset
 ```{r}
-log_rf_model <- randomForest(comp_log_train[,-c(3,5)], comp_log_train$duration_perdollar, ntree = 50, do.trace = TRUE)
+log_rf_model <- randomForest(comp_log_train[,-c(3,5,9)], comp_log_train$duration_perdollar, ntree = 50, do.trace = TRUE)
 round(importance(log_rf_model),2)
 log_rf_predict <- predict(log_rf_model, interval = "prediction", newdata = comp_log_test)
 errors_log_rf <- exp(log_rf_predict) - exp(comp_log_test$duration_perdollar)
